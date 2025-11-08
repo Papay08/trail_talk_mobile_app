@@ -26,6 +26,17 @@ import FacultySearchScreen from '../screens/student/SearchScreen'; // Using same
 import StudentSupportScreen from '../screens/student/SupportScreen';
 import FacultySupportScreen from '../screens/faculty/SupportScreen';
 
+// Import CommunityScreen
+import StudentCommunityScreen from '../screens/student/CommunityScreen';
+import FacultyCommunityScreen from '../screens/faculty/CommunityScreen';
+
+// Import NotificationsScreen
+import StudentNotificationsScreen from '../screens/student/NotificationsScreen';
+import FacultyNotificationsScreen from '../screens/faculty/NotificationsScreen';
+
+// Import MessageScreen
+import StudentMessagesScreen from '../screens/student/MessagesScreen';
+
 import BottomNavigation from '../components/BottomNavigation';
 
 const Stack = createNativeStackNavigator();
@@ -51,9 +62,9 @@ function StudentTabNavigator() {
       <StudentTab.Screen name="StudentHome" component={StudentHomeScreen} />
       <StudentTab.Screen name="StudentSearch" component={StudentSearchScreen} />
       <StudentTab.Screen name="StudentSupport" component={StudentSupportScreen} />
-      <StudentTab.Screen name="StudentCommunity" component={PlaceholderScreen} />
-      <StudentTab.Screen name="StudentNotifications" component={PlaceholderScreen} />
-      <StudentTab.Screen name="StudentMessages" component={PlaceholderScreen} />
+      <StudentTab.Screen name="StudentCommunity" component={StudentCommunityScreen} />
+      <StudentTab.Screen name="StudentNotifications" component={StudentNotificationsScreen} />
+      <StudentTab.Screen name="StudentMessages" component={StudentMessagesScreen} />
     </StudentTab.Navigator>
   );
 }
@@ -70,8 +81,8 @@ function FacultyTabNavigator() {
       <FacultyTab.Screen name="FacultyHome" component={FacultyHomeScreen} />
       <FacultyTab.Screen name="FacultySearch" component={FacultySearchScreen} />
       <FacultyTab.Screen name="FacultySupport" component={FacultySupportScreen} />
-      <FacultyTab.Screen name="FacultyCommunity" component={PlaceholderScreen} />
-      <FacultyTab.Screen name="FacultyNotifications" component={PlaceholderScreen} />
+      <FacultyTab.Screen name="FacultyCommunity" component={FacultyCommunityScreen} />
+      <FacultyTab.Screen name="FacultyNotifications" component={FacultyNotificationsScreen} />
       <FacultyTab.Screen name="FacultyMessages" component={PlaceholderScreen} />
     </FacultyTab.Navigator>
   );
