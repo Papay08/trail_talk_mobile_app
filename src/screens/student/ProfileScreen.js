@@ -13,6 +13,7 @@ const { width: screenWidth } = Dimensions.get('window');
 export default function ProfileScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState('Post');
   const [username, setUsername] = useState('User');
+  const [displayName, setDisplayName] = useState('User');
   const [birthday, setBirthday] = useState(null);
   const [joinDate, setJoinDate] = useState(null);
   const [followingCount, setFollowingCount] = useState(0);
@@ -21,6 +22,7 @@ export default function ProfileScreen({ navigation }) {
   const [userPosts, setUserPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(false);
+  const [profileData, setProfileData] = useState(null);
   const { user } = useContext(UserContext);
   const animation = useRef(new Animated.Value(0)).current;
 
@@ -50,21 +52,25 @@ export default function ProfileScreen({ navigation }) {
         .single();
 
       if (!profileError && profileData) {
+        setProfileData(profileData);
         setUsername(profileData.username || 'User');
+        setDisplayName(profileData.display_name || profileData.username || 'User');
         
-        // Format birthday if exists
+        // Format birthday if exists - CHANGED TO MM/DD/YYYY
         if (profileData.birthday) {
           const birthDate = new Date(profileData.birthday);
-          setBirthday(birthDate.toLocaleDateString('en-US', {
-            month: 'long',
-            day: 'numeric',
+          // MM/DD/YYYY format for ProfileScreen
+          const formattedBirthday = birthDate.toLocaleDateString('en-US', {
+            month: '2-digit',
+            day: '2-digit',
             year: 'numeric'
-          }));
+          });
+          setBirthday(formattedBirthday); // This will show like "07/18/2004"
         } else {
           setBirthday('Not set');
         }
 
-        // Format join date (created_at from auth or profiles)
+        // Format join date (keep the original format for join date)
         if (profileData.created_at) {
           const joinDate = new Date(profileData.created_at);
           setJoinDate(joinDate.toLocaleDateString('en-US', {
@@ -102,7 +108,7 @@ export default function ProfileScreen({ navigation }) {
         setFollowingCount(followingCount || 0);
       }
 
-      // Fetch post count - FIXED: using author_id instead of user_id
+      // Fetch post count
       const { count: postCount, error: postError } = await supabase
         .from('posts')
         .select('*', { count: 'exact', head: true })
@@ -113,21 +119,21 @@ export default function ProfileScreen({ navigation }) {
       }
 
     } catch (error) {
-      console.log('Error fetching profile data:', error);
-      // Fallback values
-      setBirthday('Not set');
-      if (user?.created_at) {
-        const joinDate = new Date(user.created_at);
-        setJoinDate(joinDate.toLocaleDateString('en-US', {
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric'
-        }));
-      }
-    } finally {
-      setLoading(false);
+    console.log('Error fetching profile data:', error);
+    // Fallback values
+    setBirthday('Not set');
+    if (user?.created_at) {
+      const joinDate = new Date(user.created_at);
+      setJoinDate(joinDate.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      }));
     }
-  };
+  } finally {
+    setLoading(false);
+  }
+};
 
   const fetchUserPosts = async () => {
     if (!user) {
@@ -165,12 +171,13 @@ export default function ProfileScreen({ navigation }) {
   // AUTO-REFRESH WHEN FOCUSED
   useFocusEffect(
     useCallback(() => {
-      console.log('Profile screen focused - refreshing posts');
+      console.log('Profile screen focused - refreshing posts and profile');
+      fetchUserProfileData();
       fetchUserPosts();
     }, [user])
   );
 
-  // REAL-TIME SUBSCRIPTIONS FOR INTERACTION UPDATES (SAME AS HOMESCREEN)
+  // REAL-TIME SUBSCRIPTIONS FOR INTERACTION UPDATES
   useEffect(() => {
     console.log('Setting up real-time subscriptions for ProfileScreen interactions...');
 
@@ -368,14 +375,24 @@ export default function ProfileScreen({ navigation }) {
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         {/* Profile Details Section */}
         <View style={styles.profileDetails}>
+          {/* Cover Image */}
           <Image 
-            source={require('../../../assets/profile_page_icons/profile_default_bg.png')}
+            source={
+              profileData?.cover_url 
+                ? { uri: profileData.cover_url }
+                : require('../../../assets/profile_page_icons/profile_default_bg.png')
+            }
             style={styles.coverImage}
           />
           
+          {/* Profile Image */}
           <View style={styles.profileImageContainer}>
             <Image 
-              source={require('../../../assets/profile_page_icons/default_profile_icon.png')}
+              source={
+                profileData?.avatar_url 
+                  ? { uri: profileData.avatar_url }
+                  : require('../../../assets/profile_page_icons/default_profile_icon.png')
+              }
               style={styles.profileImage}
             />
           </View>
@@ -390,7 +407,7 @@ export default function ProfileScreen({ navigation }) {
           </View>
           
           <View style={styles.nameRow}>
-            <Text style={styles.userName}>{username}</Text>
+            <Text style={styles.userName}>{displayName}</Text>
             <View style={styles.roleFrame}>
               <Image 
                 source={require('../../../assets/post_card_icons/student_icon.png')}
@@ -647,7 +664,7 @@ const styles = StyleSheet.create({
   },
   calendarItem: {
     marginLeft: 'auto',
-    marginRight: 18,
+    marginRight: 10,
   },
   infoIcon: {
     width: 16,
@@ -682,7 +699,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: fonts.bold,
     color: colors.white,
-    marginRight: 6,
+    marginRight: 0,
   },
   statLabel: {
     fontSize: 14,
