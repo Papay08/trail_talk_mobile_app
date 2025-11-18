@@ -11,7 +11,8 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  ScrollView
+  ScrollView,
+  Switch
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../styles/colors';
@@ -28,6 +29,9 @@ const CreatePostScreen = ({ navigation }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [userDisplayName, setUserDisplayName] = useState('Blazer01'); // Default fallback
   const [userInitials, setUserInitials] = useState('USR'); // Default fallback
+  const [isUsingCustomName, setIsUsingCustomName] = useState(false);
+  const [postAnonymously, setPostAnonymously] = useState(true); // Default to true
+  const [userProfileData, setUserProfileData] = useState(null);
   const { user, loading } = useContext(UserContext);
 
   const textInputRef = useRef(null);
@@ -45,10 +49,10 @@ const CreatePostScreen = ({ navigation }) => {
     if (!user) return;
 
     try {
-      // Get profile data from profiles table
+      // Get FULL profile data from profiles table including display_name AND post_anonymously
       const { data: profileData, error } = await supabase
         .from('profiles')
-        .select('username, student_id, school_email, user_type')
+        .select('username, display_name, student_id, school_email, user_type, avatar_url, post_anonymously')
         .eq('id', user.id)
         .single();
 
@@ -59,27 +63,43 @@ const CreatePostScreen = ({ navigation }) => {
         return;
       }
 
+      // Store profile data
+      setUserProfileData(profileData);
+
+      // Set global anonymous posting preference
+      setPostAnonymously(profileData.post_anonymously ?? true);
+
       // Determine what to display as the username
       let displayName = 'Blazer01'; // Default
       let initials = 'USR'; // Default
+      let usingCustomName = false;
 
-      // Priority 1: Use username from profiles table
-      if (profileData?.username) {
+      // PRIORITY 1: Use display_name from profiles table if it's customized (not null/empty)
+      if (profileData?.display_name && profileData.display_name.trim() !== '') {
+        displayName = profileData.display_name;
+        initials = profileData.display_name.substring(0, 3).toUpperCase();
+        usingCustomName = true;
+      }
+      // PRIORITY 2: Use username from profiles table
+      else if (profileData?.username) {
         displayName = profileData.username;
         initials = profileData.username.substring(0, 3).toUpperCase();
+        usingCustomName = false;
       }
-      // Priority 2: Use student_id if available
+      // PRIORITY 3: Use student_id if available
       else if (profileData?.student_id) {
         displayName = profileData.student_id;
         initials = profileData.student_id.substring(0, 3).toUpperCase();
+        usingCustomName = false;
       }
-      // Priority 3: Use school_email if available
+      // PRIORITY 4: Use school_email if available
       else if (profileData?.school_email) {
         const emailPart = profileData.school_email.split('@')[0];
         displayName = emailPart;
         initials = emailPart.substring(0, 3).toUpperCase();
+        usingCustomName = false;
       }
-      // Priority 4: Fallback to auth user email
+      // PRIORITY 5: Fallback to auth user email
       else {
         handleFallbackDisplayName();
         return;
@@ -87,6 +107,7 @@ const CreatePostScreen = ({ navigation }) => {
 
       setUserDisplayName(displayName);
       setUserInitials(initials);
+      setIsUsingCustomName(usingCustomName);
       
     } catch (error) {
       console.log('Error in fetchUserProfile:', error);
@@ -100,34 +121,48 @@ const CreatePostScreen = ({ navigation }) => {
       const emailPart = user.email.split('@')[0];
       setUserDisplayName(emailPart);
       setUserInitials(emailPart.substring(0, 3).toUpperCase());
+      setIsUsingCustomName(false);
     } else {
       setUserDisplayName('Blazer01');
       setUserInitials('USR');
+      setIsUsingCustomName(false);
     }
   };
 
-  // Function to get user initials for post submission
-  const getUserInitialsForPost = async () => {
+  // Function to get display name for post - UPDATED FOR ANONYMOUS POSTING
+  const getDisplayNameForPost = async () => {
     if (!user) return 'USR';
     
     try {
       // Get fresh profile data to ensure we have the latest
       const { data: profileData, error } = await supabase
         .from('profiles')
-        .select('username, student_id, school_email')
+        .select('display_name, username, student_id, school_email, post_anonymously')
         .eq('id', user.id)
         .single();
 
       if (!error && profileData) {
-        // Priority 1: Use username
+        // Check if we should post anonymously (global setting + current toggle)
+        const shouldPostAnonymously = postAnonymously;
+
+        if (shouldPostAnonymously) {
+          return 'Anonymous User'; // Return full anonymous name
+        }
+
+        // If not anonymous, use normal logic
+        // PRIORITY 1: Use display_name if customized
+        if (profileData.display_name && profileData.display_name.trim() !== '') {
+          return profileData.display_name; // Return full name, not initials
+        }
+        // PRIORITY 2: Use username
         if (profileData.username) {
           return profileData.username.substring(0, 3).toUpperCase();
         }
-        // Priority 2: Use student_id
+        // PRIORITY 3: Use student_id
         if (profileData.student_id) {
           return profileData.student_id.substring(0, 3).toUpperCase();
         }
-        // Priority 3: Use school_email
+        // PRIORITY 4: Use school_email
         if (profileData.school_email) {
           const emailPart = profileData.school_email.split('@')[0];
           return emailPart.substring(0, 3).toUpperCase();
@@ -137,18 +172,18 @@ const CreatePostScreen = ({ navigation }) => {
       // Fallback to auth user email
       if (user.email) {
         const emailPart = user.email.split('@')[0];
-        return emailPart.substring(0, 3).toUpperCase();
+        return postAnonymously ? 'Anonymous User' : emailPart.substring(0, 3).toUpperCase();
       }
 
-      return 'USR'; // Final fallback
+      return postAnonymously ? 'Anonymous User' : 'USR'; // Final fallback
     } catch (error) {
-      console.log('Error getting user initials for post:', error);
+      console.log('Error getting display name for post:', error);
       // Fallback to current state or auth email
       if (user?.email) {
         const emailPart = user.email.split('@')[0];
-        return emailPart.substring(0, 3).toUpperCase();
+        return postAnonymously ? 'Anonymous User' : emailPart.substring(0, 3).toUpperCase();
       }
-      return userInitials || 'USR';
+      return postAnonymously ? 'Anonymous User' : (userInitials || 'USR');
     }
   };
 
@@ -198,8 +233,8 @@ const CreatePostScreen = ({ navigation }) => {
         return;
       }
 
-      // Get fresh initials for the post
-      const authorInitials = await getUserInitialsForPost();
+      // Get display name for the post - USING UPDATED FUNCTION WITH ANONYMOUS LOGIC
+      const displayName = await getDisplayNameForPost();
 
       const { data, error } = await supabase
         .from('posts')
@@ -208,8 +243,8 @@ const CreatePostScreen = ({ navigation }) => {
             content: message.trim(),
             category: selectedCategory,
             author_id: userData.user.id,
-            author_initials: authorInitials,
-            is_anonymous: true
+            author_initials: displayName, // Now stores either "Anonymous User" or actual name
+            is_anonymous: postAnonymously // Store the anonymous status
           }
         ])
         .select();
@@ -249,6 +284,22 @@ const CreatePostScreen = ({ navigation }) => {
     textInputRef.current?.focus();
   };
 
+  // Get current display name for UI
+  const getCurrentDisplayName = () => {
+    if (postAnonymously) {
+      return 'Anonymous User';
+    }
+    return isUsingCustomName ? userDisplayName : userInitials;
+  };
+
+  // Get current status text
+  const getCurrentStatus = () => {
+    if (postAnonymously) {
+      return 'Anonymous User • Your identity is hidden';
+    }
+    return `${isUsingCustomName ? 'Custom Name' : userInitials} • Your identity is visible`;
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <KeyboardAvoidingView 
@@ -269,7 +320,7 @@ const CreatePostScreen = ({ navigation }) => {
             translucent={false}
           />
           
-          {/* Header */}
+          {/* Header with Anonymous Toggle */}
           <ImageBackground 
             source={require('../../../assets/create_post_screen_icons/createpost_header_bg.png')}
             style={styles.headerBackground}
@@ -292,12 +343,12 @@ const CreatePostScreen = ({ navigation }) => {
                 <Text style={styles.headerTitle}>Create Post</Text>
               </View>
 
-              <View style={styles.rightSpacer} />
+              {/* Anonymous toggle moved into user card (see below) */}
             </View>
           </ImageBackground>
 
-          {/* User Identity Card - NOW WITH DYNAMIC DATA */}
-          <View style={styles.userCard}>
+          {/* User Identity Card - NOW SHOWS ANONYMOUS OR ACTUAL NAME */}
+          <View style={[styles.userCard, styles.userCardAdjusted]}>
             <View style={styles.userInfo}>
               <Image 
                 source={require('../../../assets/create_post_screen_icons/anon_icon.png')}
@@ -305,12 +356,25 @@ const CreatePostScreen = ({ navigation }) => {
                 resizeMode="contain"
               />
               <View style={styles.userText}>
-                <Text style={styles.userName}>{userDisplayName}</Text>
-                <Text style={styles.userStatus}>Anonymous User • {userInitials}</Text>
+                <Text style={styles.userName}>
+                  {getCurrentDisplayName()}
+                </Text>
+                <Text style={styles.userStatus}>
+                  {userInitials}
+                </Text>
               </View>
             </View>
-            <View style={styles.verifiedBadge}>
-              <Text style={styles.verifiedText}>✓</Text>
+            <View style={styles.controlsRight}>
+              <View style={styles.verifiedBadge}>
+                <Text style={styles.verifiedText}>✓</Text>
+              </View>
+              <Switch
+                value={postAnonymously}
+                onValueChange={setPostAnonymously}
+                thumbColor={postAnonymously ? '#4ECDC4' : '#f4f3f4'}
+                trackColor={{ false: 'rgba(255,255,255,0.1)', true: 'rgba(78,205,196,0.25)' }}
+                style={styles.anonymousSwitchSmall}
+              />
             </View>
           </View>
 
@@ -453,7 +517,10 @@ const CreatePostScreen = ({ navigation }) => {
             </TouchableOpacity>
             
             <Text style={styles.postDisclaimer}>
-              Your post will be published anonymously as {userDisplayName}
+              Your post will be published as{' '}
+              <Text style={styles.postDisclaimerHighlight}>
+                {getCurrentDisplayName()}
+              </Text>
             </Text>
           </View>
 
@@ -516,8 +583,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 1.5,
   },
-  rightSpacer: {
-    width: 42,
+  // Anonymous Toggle in Header
+  anonymousToggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  anonymousToggleText: {
+    fontSize: 12,
+    fontFamily: fonts.medium,
+    color: colors.white,
+    marginRight: 8,
   },
   // User Card
   userCard: {
@@ -569,6 +650,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.white,
     fontFamily: fonts.bold,
+  },
+  controlsRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  anonymousSwitchSmall: {
+    transform: [{ scaleX: 0.7 }, { scaleY: 0.7 }],
+    marginLeft: 8,
+  },
+  userCardAdjusted: {
+    paddingVertical: 14,
   },
   // Section Styles
   section: {
@@ -727,6 +820,10 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.5)',
     marginTop: 8,
     textAlign: 'center',
+  },
+  postDisclaimerHighlight: {
+    color: '#FFCC00',
+    fontFamily: fonts.semiBold,
   },
   bottomSpacer: {
     height: 10,

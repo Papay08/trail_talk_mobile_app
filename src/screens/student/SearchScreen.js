@@ -26,6 +26,8 @@ export default function SearchScreen({ navigation }) {
     setSearchQuery,
     searchResults,
     suggestedAccounts,
+    communityResults,
+    suggestedCommunities,
     isLoading,
     error,
     activeCategory,
@@ -35,6 +37,7 @@ export default function SearchScreen({ navigation }) {
     clearSearch,
     loadSuggestedContent
   } = useSearch();
+
 
   const [refreshing, setRefreshing] = React.useState(false);
   const [hiddenUsers, setHiddenUsers] = React.useState(new Set());
@@ -118,16 +121,18 @@ export default function SearchScreen({ navigation }) {
       <View style={styles.cardHeader}>
         <View style={styles.userIdentity}>
           <View style={styles.avatarContainer}>
-            <Image 
-              source={require('../../../assets/profile_page_icons/default_profile_icon.png')} 
-              style={styles.avatar} 
+            <Image
+              source={item.avatarUrl ? { uri: item.avatarUrl } : require('../../../assets/profile_page_icons/default_profile_icon.png')}
+              style={styles.avatar}
             />
-            <View style={[
-              styles.initialsBadge,
-              item.user_type === 'student' ? styles.studentBadge : styles.facultyBadge
-            ]}>
-              <Text style={styles.initialsText}>{item.initials}</Text>
-            </View>
+            {!item.avatarUrl && (
+              <View style={[
+                styles.initialsBadge,
+                item.user_type === 'student' ? styles.studentBadge : styles.facultyBadge
+              ]}>
+                <Text style={styles.initialsText}>{item.initials}</Text>
+              </View>
+            )}
           </View>
           <View style={styles.userMainInfo}>
             <Text style={styles.userName}>{item.displayName}</Text>
@@ -182,9 +187,37 @@ export default function SearchScreen({ navigation }) {
     </View>
   );
 
+  const renderCommunityCard = ({ item }) => (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.userName, { fontSize: 16 }]}>{item.name}</Text>
+          <Text style={[styles.roleText, { color: 'rgba(255,255,255,0.7)', marginTop: 6 }]} numberOfLines={2}>{item.description || 'No description'}</Text>
+        </View>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={styles.statNumber}>{item.member_count || 0}</Text>
+          <Text style={styles.statLabel}>Members</Text>
+        </View>
+      </View>
+      <View style={styles.cardActions}>
+        <TouchableOpacity
+          style={[styles.followButton, { backgroundColor: '#4ECDC4' }]}
+          onPress={() => navigation.navigate('CommunityDetail', { communityId: item.id })}
+        >
+          <Text style={[styles.followButtonText, { color: colors.white }]}>View Community</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   const hasSearchResults = filteredSearchResults.length > 0;
   const hasSuggestedContent = filteredSuggestedAccounts.length > 0;
   const showSuggestedContent = !searchQuery.trim() && !hasSearchResults;
+
+  // community data selection
+  const communityData = activeCategory === 'communities'
+    ? (searchQuery.trim() ? (typeof communityResults !== 'undefined' ? communityResults : []) : (typeof suggestedCommunities !== 'undefined' ? suggestedCommunities : []))
+    : [];
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -287,38 +320,73 @@ export default function SearchScreen({ navigation }) {
           </View>
         )}
 
-        <FlatList
-          data={showSuggestedContent ? filteredSuggestedAccounts : filteredSearchResults}
-          renderItem={renderUserCard}
-          keyExtractor={(item) => item.id}
-          scrollEnabled={false}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            !isLoading && searchQuery ? (
-              <View style={styles.emptyState}>
-                <Image 
-                  source={require('../../../assets/bottom_navigation_icons/search_icon_fill.png')}
-                  style={styles.emptyStateIcon}
-                />
-                <Text style={styles.emptyStateTitle}>No results found</Text>
-                <Text style={styles.emptyStateText}>
-                  No results for "{searchQuery}"
-                </Text>
-              </View>
-            ) : !searchQuery && !hasSuggestedContent && !isLoading ? (
-              <View style={styles.welcomeState}>
-                <Image 
-                  source={require('../../../assets/bottom_navigation_icons/search_icon_fill.png')}
-                  style={styles.welcomeIcon}
-                />
-                <Text style={styles.welcomeTitle}>Find Students & Faculty</Text>
-                <Text style={styles.welcomeText}>
-                  Search by name or student ID to connect with others
-                </Text>
-              </View>
-            ) : null
-          }
-        />
+          {activeCategory === 'communities' ? (
+            <FlatList
+              data={communityData}
+              renderItem={renderCommunityCard}
+              keyExtractor={(item) => item.id}
+              scrollEnabled={false}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                !isLoading && searchQuery ? (
+                  <View style={styles.emptyState}>
+                    <Image 
+                      source={require('../../../assets/bottom_navigation_icons/search_icon_fill.png')}
+                      style={styles.emptyStateIcon}
+                    />
+                    <Text style={styles.emptyStateTitle}>No communities found</Text>
+                    <Text style={styles.emptyStateText}>
+                      No results for "{searchQuery}"
+                    </Text>
+                  </View>
+                ) : !searchQuery && (!communityData || communityData.length === 0) && !isLoading ? (
+                  <View style={styles.welcomeState}>
+                    <Image 
+                      source={require('../../../assets/bottom_navigation_icons/search_icon_fill.png')}
+                      style={styles.welcomeIcon}
+                    />
+                    <Text style={styles.welcomeTitle}>Explore Communities</Text>
+                    <Text style={styles.welcomeText}>
+                      Browse or search communities by name or category
+                    </Text>
+                  </View>
+                ) : null
+              }
+            />
+          ) : (
+            <FlatList
+              data={showSuggestedContent ? filteredSuggestedAccounts : filteredSearchResults}
+              renderItem={renderUserCard}
+              keyExtractor={(item) => item.id}
+              scrollEnabled={false}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                !isLoading && searchQuery ? (
+                  <View style={styles.emptyState}>
+                    <Image 
+                      source={require('../../../assets/bottom_navigation_icons/search_icon_fill.png')}
+                      style={styles.emptyStateIcon}
+                    />
+                    <Text style={styles.emptyStateTitle}>No results found</Text>
+                    <Text style={styles.emptyStateText}>
+                      No results for "{searchQuery}"
+                    </Text>
+                  </View>
+                ) : !searchQuery && !hasSuggestedContent && !isLoading ? (
+                  <View style={styles.welcomeState}>
+                    <Image 
+                      source={require('../../../assets/bottom_navigation_icons/search_icon_fill.png')}
+                      style={styles.welcomeIcon}
+                    />
+                    <Text style={styles.welcomeTitle}>Find Students & Faculty</Text>
+                    <Text style={styles.welcomeText}>
+                      Search by name or student ID to connect with others
+                    </Text>
+                  </View>
+                ) : null
+              }
+            />
+          )}
 
         <View style={styles.bottomSpacer} />
       </ScrollView>

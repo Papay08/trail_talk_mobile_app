@@ -485,7 +485,7 @@ export default function EditProfileScreen({ navigation }) {
           )}
         </View>
 
-        {/* Post Anonymously Toggle */}
+        {/* Post Anonymously Toggle - UPDATED DESCRIPTION */}
         <View style={styles.formSection}>
           <View style={styles.toggleContainer}>
             <View style={styles.toggleLabelContainer}>
@@ -493,7 +493,10 @@ export default function EditProfileScreen({ navigation }) {
               <View style={styles.toggleTextContainer}>
                 <Text style={styles.label}>Post Anonymously</Text>
                 <Text style={styles.toggleSubtext}>
-                  Your identity will be hidden when posting
+                  {postAnonymously 
+                    ? 'All posts will show as "Anonymous User" by default' 
+                    : 'Posts will show your display name by default'
+                  }
                 </Text>
               </View>
             </View>

@@ -20,7 +20,7 @@ import { fonts } from '../../styles/fonts';
 import { UserContext } from '../../contexts/UserContext';
 import { useCommunityPosts } from '../../hooks/useCommunityPosts';
 import { joinCommunity, leaveCommunity, getCommunityDetails } from '../../lib/supabase';
-import CommunityPostCard from '../../components/CommunityPostCard';
+import PostCard from '../../components/PostCard';
 
 export default function CommunityFeedScreen({ route, navigation }) {
   const { communityId } = route.params;
@@ -185,8 +185,8 @@ export default function CommunityFeedScreen({ route, navigation }) {
   );
 
   const renderPostItem = ({ item }) => (
-    <CommunityPostCard 
-      post={item} 
+    <PostCard
+      post={item}
       userRole={userRole}
       onInteraction={(postId, field, newCount) => {
         console.log(`Post ${postId} ${field} updated to ${newCount}`);

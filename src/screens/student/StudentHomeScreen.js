@@ -9,7 +9,7 @@ import PostCard from '../../components/PostCard';
 import { usePosts } from '../../hooks/usePost';
 import { UserContext } from '../../contexts/UserContext';
 
-export default function StudentHomeScreen({ navigation }) {
+export default function StudentHomeScreen({ navigation, route }) {
   const [activeTab, setActiveTab] = useState('forYou');
   const { user } = useContext(UserContext);
   const isFocused = useIsFocused();
@@ -17,6 +17,21 @@ export default function StudentHomeScreen({ navigation }) {
   const refreshCooldown = 5000; // 5 seconds cooldown between refreshes
   
   const { posts, refreshing, onRefresh, refetchPosts } = usePosts(activeTab, user?.id);
+
+  // If returning from CommentScreen with a commentedPostId param, refresh posts
+  useEffect(() => {
+    const commentedPostId = route?.params?.commentedPostId;
+    if (commentedPostId) {
+      console.log('Detected commentedPostId, refetching posts:', commentedPostId);
+      refetchPosts();
+      // clear the param so repeated focuses don't trigger another refresh
+      try {
+        navigation.setParams({ commentedPostId: null });
+      } catch (e) {
+        // ignore if not allowed
+      }
+    }
+  }, [route?.params?.commentedPostId]);
 
   const handleFilterPress = () => {
     console.log('Filter pressed');

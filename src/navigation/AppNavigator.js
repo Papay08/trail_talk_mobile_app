@@ -45,6 +45,7 @@ import CommunityDetailScreen from '../screens/student/CommunityDetailScreen';
 
 // Import CreateCommunityPostScreen
 import CreateCommunityPostScreen from '../screens/student/CreateCommunityPostScreen';
+import CommentScreen from '../screens/student/CommentScreen';
 
 import BottomNavigation from '../components/BottomNavigation';
 
@@ -123,6 +124,13 @@ export default function AppNavigator() {
         component={StudentCreatePostScreen}
         options={{
           animation: 'slide_from_bottom',
+        }}
+      />
+      <Stack.Screen
+        name="CommentScreen"
+        component={CommentScreen}
+        options={{
+          animation: 'slide_from_right',
         }}
       />
       <Stack.Screen 

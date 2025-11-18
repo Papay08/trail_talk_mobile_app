@@ -23,7 +23,7 @@ export default function ProfileScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(false);
   const [profileData, setProfileData] = useState(null);
-  const { user } = useContext(UserContext);
+  const { user, profile, updateProfile } = useContext(UserContext);
   const animation = useRef(new Animated.Value(0)).current;
 
   const tabs = ['Post', 'Replies', 'BookMarks', 'Like'];
@@ -37,6 +37,46 @@ export default function ProfileScreen({ navigation }) {
       fetchUserPosts();
     }
   }, [user]);
+
+  // Update local profile data when context profile changes
+  useEffect(() => {
+    if (profile) {
+      setProfileData(profile);
+      setUsername(profile.username || 'User');
+      setDisplayName(profile.display_name || profile.username || 'User');
+      
+      // Format birthday if exists - CHANGED TO MM/DD/YYYY
+      if (profile.birthday) {
+        const birthDate = new Date(profile.birthday);
+        // MM/DD/YYYY format for ProfileScreen
+        const formattedBirthday = birthDate.toLocaleDateString('en-US', {
+          month: '2-digit',
+          day: '2-digit',
+          year: 'numeric'
+        });
+        setBirthday(formattedBirthday); // This will show like "07/18/2004"
+      } else {
+        setBirthday('Not set');
+      }
+
+      // Format join date (keep the original format for join date)
+      if (profile.created_at) {
+        const joinDate = new Date(profile.created_at);
+        setJoinDate(joinDate.toLocaleDateString('en-US', {
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric'
+        }));
+      } else if (user.created_at) {
+        const joinDate = new Date(user.created_at);
+        setJoinDate(joinDate.toLocaleDateString('en-US', {
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric'
+        }));
+      }
+    }
+  }, [profile]);
 
   const fetchUserProfileData = async () => {
     if (!user) return;
@@ -174,6 +214,10 @@ export default function ProfileScreen({ navigation }) {
       console.log('Profile screen focused - refreshing posts and profile');
       fetchUserProfileData();
       fetchUserPosts();
+      // Update profile in context to ensure header gets latest image
+      if (user) {
+        updateProfile(user.id);
+      }
     }, [user])
   );
 

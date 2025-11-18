@@ -49,7 +49,38 @@ export const usePosts = (activeTab, currentUserId) => {
       }));
 
       console.log('Successfully combined posts with authors');
-      return postsWithAuthors;
+      // For each post, fetch interaction counts from their respective tables so counts are authoritative
+      const enriched = await Promise.all(postsWithAuthors.map(async (p) => {
+        try {
+          const postId = p.id;
+          // Use head:true to get counts without returning rows
+          const [{ count: likesCount }, { count: commentsCount }, { count: repostsCount }, { count: bookmarksCount }] = await Promise.all([
+            supabase.from('post_likes').select('*', { head: true, count: 'exact' }).eq('post_id', postId),
+            supabase.from('comments').select('*', { head: true, count: 'exact' }).eq('post_id', postId),
+            supabase.from('reposts').select('*', { head: true, count: 'exact' }).eq('post_id', postId),
+            supabase.from('bookmarks').select('*', { head: true, count: 'exact' }).eq('post_id', postId),
+          ]);
+
+          return {
+            ...p,
+            likes_count: Number(likesCount) || 0,
+            comments_count: Number(commentsCount) || 0,
+            reposts_count: Number(repostsCount) || 0,
+            bookmarks_count: Number(bookmarksCount) || 0,
+          };
+        } catch (err) {
+          console.log('Error fetching counts for post', p.id, err);
+          return {
+            ...p,
+            likes_count: p.likes_count || 0,
+            comments_count: p.comments_count || 0,
+            reposts_count: p.reposts_count || 0,
+            bookmarks_count: p.bookmarks_count || 0,
+          };
+        }
+      }));
+
+      return enriched;
     } catch (error) {
       console.log('Error fetching all posts:', error);
       return [];
@@ -116,7 +147,37 @@ export const usePosts = (activeTab, currentUserId) => {
       }));
 
       console.log('Successfully combined followed posts with authors');
-      return postsWithAuthors;
+      // Enrich counts (likes/comments/reposts/bookmarks) from related tables
+      const enriched = await Promise.all(postsWithAuthors.map(async (p) => {
+        try {
+          const postId = p.id;
+          const [{ count: likesCount }, { count: commentsCount }, { count: repostsCount }, { count: bookmarksCount }] = await Promise.all([
+            supabase.from('post_likes').select('*', { head: true, count: 'exact' }).eq('post_id', postId),
+            supabase.from('comments').select('*', { head: true, count: 'exact' }).eq('post_id', postId),
+            supabase.from('reposts').select('*', { head: true, count: 'exact' }).eq('post_id', postId),
+            supabase.from('bookmarks').select('*', { head: true, count: 'exact' }).eq('post_id', postId),
+          ]);
+
+          return {
+            ...p,
+            likes_count: Number(likesCount) || 0,
+            comments_count: Number(commentsCount) || 0,
+            reposts_count: Number(repostsCount) || 0,
+            bookmarks_count: Number(bookmarksCount) || 0,
+          };
+        } catch (err) {
+          console.log('Error fetching counts for followed post', p.id, err);
+          return {
+            ...p,
+            likes_count: p.likes_count || 0,
+            comments_count: p.comments_count || 0,
+            reposts_count: p.reposts_count || 0,
+            bookmarks_count: p.bookmarks_count || 0,
+          };
+        }
+      }));
+
+      return enriched;
     } catch (error) {
       console.log('Error in fetchFollowingPosts:', error);
       return [];
@@ -150,6 +211,39 @@ export const usePosts = (activeTab, currentUserId) => {
     if (currentUserId) {
       fetchPosts();
     }
+  }, [currentUserId]);
+
+  // REAL-TIME SUBSCRIPTIONS: refresh feed when interactions change
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    console.log('Setting up realtime subscriptions for post interactions');
+
+    const channel = supabase.channel('posts-interactions');
+
+    const tables = ['post_likes', 'comments', 'reposts', 'bookmarks'];
+
+    tables.forEach(table =>
+      channel.on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table },
+        (payload) => {
+          console.log('Realtime event on', table, payload.eventType || payload.type);
+          // Debounce/coalesce by scheduling a single refetch
+          fetchPosts();
+        }
+      )
+    );
+
+    channel.subscribe((status) => console.log('posts-interactions channel status', status));
+
+    return () => {
+      try {
+        channel.unsubscribe();
+      } catch (e) {
+        console.log('Error unsubscribing posts-interactions channel', e);
+      }
+    };
   }, [currentUserId]);
 
   return {

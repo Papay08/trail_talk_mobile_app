@@ -274,24 +274,22 @@ export default function CommunityScreen({ navigation }) {
     );
   };
 
-  // Community Creation Section with Dropdown
+  // ENHANCED CommunityCreationSection with SINGLE FRAME LAYOUT
   const CommunityCreationSection = () => (
-    <View style={styles.creationSection}>
+    <View style={styles.featuredSection}>
+      {/* SINGLE FRAME HEADER with Title + Featured Label + Dropdown */}
       <TouchableOpacity 
-        style={styles.creationHeader}
+        style={styles.featuredHeader}
         onPress={() => setShowFeatured(!showFeatured)}
         activeOpacity={0.7}
       >
-        <View style={styles.creationHeaderLeft}>
-          <Ionicons name="rocket-outline" size={28} color="#4ECDC4" />
-          <View style={styles.creationTitleContainer}>
-            <Text style={styles.creationTitle}>Start Your Community</Text>
-            <Text style={styles.creationSubtitle}>
-              {userCommunityStats.createdCommunities}/{userCommunityStats.maxFreeCommunities} free communities used
-            </Text>
-          </View>
+        {/* LEFT: Title Text */}
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerTitle}>Community Plans</Text>
         </View>
-        <View style={styles.creationHeaderRight}>
+        
+        {/* RIGHT: Featured Label + Dropdown Icon */}
+        <View style={styles.headerRight}>
           <ProfessionalBadge type="featured" size="medium" />
           <Ionicons 
             name={showFeatured ? 'chevron-up' : 'chevron-down'} 
@@ -302,13 +300,15 @@ export default function CommunityScreen({ navigation }) {
         </View>
       </TouchableOpacity>
 
+      {/* CONTENT that shows/hides with dropdown */}
       {showFeatured && (
-        <View style={styles.creationContent}>
-          <View style={styles.tierCard}>
-            <View style={styles.tierHeader}>
-              <View style={styles.tierTitleContainer}>
-                <Text style={styles.tierName}>Free Plan</Text>
-                <Text style={styles.tierDescription}>
+        <View style={styles.featuredContent}>
+          {/* Free Plan Card */}
+          <View style={styles.planCard}>
+            <View style={styles.planHeader}>
+              <View style={styles.planTitleContainer}>
+                <Text style={styles.planName}>Free Plan</Text>
+                <Text style={styles.planDescription}>
                   Perfect for student clubs and study groups
                 </Text>
               </View>
@@ -323,31 +323,44 @@ export default function CommunityScreen({ navigation }) {
             </View>
             
             <View style={styles.featuresList}>
-              <Text style={styles.featureItem}>• Create up to 3 communities</Text>
-              <Text style={styles.featureItem}>• Basic community features</Text>
-              <Text style={styles.featureItem}>• Up to 50 members each</Text>
-              <Text style={styles.featureItem}>• Basic moderation tools</Text>
+              <View style={styles.featureRow}>
+                <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
+                <Text style={styles.featureItem}>Create up to 3 communities</Text>
+              </View>
+              <View style={styles.featureRow}>
+                <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
+                <Text style={styles.featureItem}>Basic community features</Text>
+              </View>
+              <View style={styles.featureRow}>
+                <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
+                <Text style={styles.featureItem}>Up to 50 members each</Text>
+              </View>
+              <View style={styles.featureRow}>
+                <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
+                <Text style={styles.featureItem}>Basic moderation tools</Text>
+              </View>
             </View>
             
             <TouchableOpacity 
               style={[
-                styles.createButton,
+                styles.planButton,
                 userCommunityStats.createdCommunities >= userCommunityStats.maxFreeCommunities && styles.disabledButton
               ]}
               onPress={() => navigation.navigate('CreateCommunity', { tier: 'free' })}
               disabled={userCommunityStats.createdCommunities >= userCommunityStats.maxFreeCommunities}
             >
-              <Text style={styles.createButtonText}>
+              <Text style={styles.planButtonText}>
                 {userCommunityStats.createdCommunities >= userCommunityStats.maxFreeCommunities ? 'Free Limit Reached' : 'Create Free Community'}
               </Text>
             </TouchableOpacity>
           </View>
 
-          <View style={[styles.tierCard, styles.premiumCard]}>
-            <View style={styles.tierHeader}>
-              <View style={styles.tierTitleContainer}>
-                <Text style={styles.premiumTierName}>Premium Plan</Text>
-                <Text style={styles.tierDescription}>
+          {/* Premium Plan Card */}
+          <View style={[styles.planCard, styles.premiumCard]}>
+            <View style={styles.planHeader}>
+              <View style={styles.planTitleContainer}>
+                <Text style={styles.premiumPlanName}>Premium Plan</Text>
+                <Text style={styles.planDescription}>
                   Advanced tools for serious community builders
                 </Text>
               </View>
@@ -355,12 +368,30 @@ export default function CommunityScreen({ navigation }) {
             </View>
             
             <View style={styles.featuresList}>
-              <Text style={styles.premiumFeatureItem}>• Unlimited communities</Text>
-              <Text style={styles.premiumFeatureItem}>• Verified creator badge</Text>
-              <Text style={styles.premiumFeatureItem}>• Advanced analytics</Text>
-              <Text style={styles.premiumFeatureItem}>• Priority support</Text>
-              <Text style={styles.premiumFeatureItem}>• Custom branding</Text>
-              <Text style={styles.premiumFeatureItem}>• Unlimited members</Text>
+              <View style={styles.featureRow}>
+                <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
+                <Text style={styles.premiumFeatureItem}>Unlimited communities</Text>
+              </View>
+              <View style={styles.featureRow}>
+                <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
+                <Text style={styles.premiumFeatureItem}>Verified creator badge</Text>
+              </View>
+              <View style={styles.featureRow}>
+                <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
+                <Text style={styles.premiumFeatureItem}>Advanced analytics</Text>
+              </View>
+              <View style={styles.featureRow}>
+                <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
+                <Text style={styles.premiumFeatureItem}>Priority support</Text>
+              </View>
+              <View style={styles.featureRow}>
+                <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
+                <Text style={styles.premiumFeatureItem}>Custom branding</Text>
+              </View>
+              <View style={styles.featureRow}>
+                <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
+                <Text style={styles.premiumFeatureItem}>Unlimited members</Text>
+              </View>
             </View>
             
             <TouchableOpacity 
@@ -619,6 +650,7 @@ export default function CommunityScreen({ navigation }) {
           />
         }
       >
+        {/* Community Creation Section with Enhanced Single Frame Layout */}
         <CommunityCreationSection />
 
         <View style={styles.quickActionsSection}>
@@ -832,54 +864,45 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
     letterSpacing: 0.3,
   },
-  creationSection: {
+  // NEW: Enhanced Featured Section Styles
+  featuredSection: {
     marginHorizontal: 20,
     marginTop: 10,
     marginBottom: 30,
-  },
-  creationHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-    padding: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
+    overflow: 'hidden',
   },
-  creationHeaderLeft: {
+  featuredHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-    gap: 12,
+    justifyContent: 'space-between',
+    padding: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
   },
-  creationHeaderRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  creationTitleContainer: {
+  headerLeft: {
     flex: 1,
   },
-  creationTitle: {
+  headerTitle: {
     fontSize: 20,
     fontFamily: fonts.bold,
     color: colors.white,
-    marginBottom: 4,
   },
-  creationSubtitle: {
-    fontSize: 14,
-    fontFamily: fonts.normal,
-    color: 'rgba(255, 255, 255, 0.7)',
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   dropdownIcon: {
-    marginLeft: 8,
+    marginLeft: 4,
   },
-  creationContent: {
-    marginTop: 8,
+  featuredContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
-  tierCard: {
+  planCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     padding: 20,
     borderRadius: 16,
@@ -891,28 +914,28 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 215, 0, 0.08)',
     borderColor: 'rgba(255, 215, 0, 0.3)',
   },
-  tierHeader: {
+  planHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 16,
   },
-  tierTitleContainer: {
+  planTitleContainer: {
     flex: 1,
   },
-  tierName: {
+  planName: {
     fontSize: 18,
     fontFamily: fonts.bold,
     color: colors.white,
     marginBottom: 6,
   },
-  premiumTierName: {
+  premiumPlanName: {
     fontSize: 18,
     fontFamily: fonts.bold,
     color: '#FFD700',
     marginBottom: 6,
   },
-  tierDescription: {
+  planDescription: {
     fontSize: 14,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.7)',
@@ -935,21 +958,26 @@ const styles = StyleSheet.create({
   featuresList: {
     marginBottom: 20,
   },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   featureItem: {
     fontSize: 14,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.8)',
-    marginBottom: 6,
+    marginLeft: 8,
     lineHeight: 18,
   },
   premiumFeatureItem: {
     fontSize: 14,
     fontFamily: fonts.normal,
     color: 'rgba(255, 255, 255, 0.9)',
-    marginBottom: 6,
+    marginLeft: 8,
     lineHeight: 18,
   },
-  createButton: {
+  planButton: {
     backgroundColor: '#4ECDC4',
     paddingVertical: 16,
     borderRadius: 12,
@@ -958,7 +986,7 @@ const styles = StyleSheet.create({
   disabledButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
-  createButtonText: {
+  planButtonText: {
     fontSize: 16,
     fontFamily: fonts.bold,
     color: colors.white,
