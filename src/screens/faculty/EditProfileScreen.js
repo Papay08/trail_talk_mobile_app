@@ -1,3 +1,4 @@
+// src/screens/faculty/EditProfileScreen.js
 import React, { useState, useContext, useEffect } from 'react';
 import {
   View,
@@ -23,7 +24,7 @@ import { fonts } from '../../styles/fonts';
 import { UserContext } from '../../contexts/UserContext';
 import { supabase } from '../../lib/supabase';
 
-export default function EditProfileScreen({ navigation }) {
+export default function FacultyEditProfileScreen({ navigation }) {
   const { user } = useContext(UserContext);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -94,7 +95,6 @@ export default function EditProfileScreen({ navigation }) {
         return;
       }
 
-      // FIXED: Completely remove mediaTypes - use default behavior
       let result = await ImagePicker.launchImageLibraryAsync({
         allowsEditing: true,
         aspect: type === 'avatar' ? [1, 1] : [16, 9],
@@ -126,7 +126,6 @@ export default function EditProfileScreen({ navigation }) {
         return;
       }
 
-      // FIXED: Completely remove mediaTypes - use default behavior
       let result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: type === 'avatar' ? [1, 1] : [16, 9],
@@ -159,7 +158,6 @@ export default function EditProfileScreen({ navigation }) {
 
       console.log('Uploading to bucket:', bucket, 'path:', filePath);
 
-      // SIMPLE FIX: Use React Native FormData approach
       const formData = new FormData();
       formData.append('file', {
         uri: uri,
@@ -205,57 +203,6 @@ export default function EditProfileScreen({ navigation }) {
     }
   };
 
-  // Alternative upload method using FormData approach
-  const uploadImageAlternative = async (uri, type) => {
-    try {
-      console.log('Using alternative upload method for:', uri);
-      
-      const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
-      const fileName = `${type}_${user.id}_${Date.now()}.${fileExt}`;
-      const filePath = `${user.id}/${fileName}`;
-      const bucket = type === 'avatar' ? 'avatars' : 'covers';
-
-      // Create form data
-      const formData = new FormData();
-      formData.append('file', {
-        uri: uri,
-        type: 'image/jpeg',
-        name: fileName,
-      });
-
-      // Get the upload URL from Supabase
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from(bucket)
-        .upload(filePath, formData, {
-          cacheControl: '3600',
-          upsert: true,
-          contentType: 'image/jpeg'
-        });
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from(bucket)
-        .getPublicUrl(filePath);
-
-      console.log('Alternative upload successful, public URL:', publicUrl);
-
-      // Update local state
-      if (type === 'avatar') {
-        setAvatar(publicUrl);
-      } else {
-        setCoverPhoto(publicUrl);
-      }
-
-      Alert.alert('Success', `${type === 'avatar' ? 'Profile photo' : 'Cover photo'} updated successfully!`);
-      
-    } catch (error) {
-      console.log('Alternative upload error:', error);
-      throw error;
-    }
-  };
-
   const handleDateChange = (event, selectedDate) => {
     setShowDatePicker(Platform.OS === 'ios');
     if (selectedDate) {
@@ -279,7 +226,7 @@ export default function EditProfileScreen({ navigation }) {
     const day = date.getDate();
     const year = date.getFullYear();
     
-    return `${month} ${day}, ${year}`; // "July 18, 2004"
+    return `${month} ${day}, ${year}`;
   };
 
   const handleSave = async () => {
@@ -329,7 +276,7 @@ export default function EditProfileScreen({ navigation }) {
   };
 
   const getRoleDisplay = () => {
-    return 'Student';
+    return 'Faculty';
   };
 
   if (loading) {
@@ -441,7 +388,7 @@ export default function EditProfileScreen({ navigation }) {
         {/* Role (Read-only) */}
         <View style={styles.formSection}>
           <View style={styles.labelRow}>
-            <Ionicons name="school-outline" size={20} color="#4CAF50" style={styles.labelIcon} />
+            <Ionicons name="school-outline" size={20} color="#FF9800" style={styles.labelIcon} />
             <Text style={styles.label}>Role</Text>
           </View>
           <View style={styles.readOnlyField}>
@@ -485,7 +432,7 @@ export default function EditProfileScreen({ navigation }) {
           )}
         </View>
 
-        {/* Post Anonymously Toggle - UPDATED DESCRIPTION */}
+        {/* Post Anonymously Toggle */}
         <View style={styles.formSection}>
           <View style={styles.toggleContainer}>
             <View style={styles.toggleLabelContainer}>
@@ -725,9 +672,9 @@ const styles = StyleSheet.create({
   },
   // Read-only Field
   readOnlyField: {
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    backgroundColor: 'rgba(255, 152, 0, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(76, 175, 80, 0.3)',
+    borderColor: 'rgba(255, 152, 0, 0.3)',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -735,7 +682,7 @@ const styles = StyleSheet.create({
   readOnlyText: {
     fontSize: 16,
     fontFamily: fonts.medium,
-    color: '#4CAF50',
+    color: '#FF9800',
   },
   // Date Input
   dateInput: {

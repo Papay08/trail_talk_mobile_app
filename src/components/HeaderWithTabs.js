@@ -1,16 +1,27 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useContext } from 'react';
 import { View, Text, TouchableOpacity, Image, Animated, StyleSheet, Dimensions } from 'react-native';
 import { colors } from '../styles/colors';
 import { fonts } from '../styles/fonts';
+import { UserContext } from '../contexts/UserContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function HeaderWithTabs({ userRole = 'student', onFilterPress, navigation, activeTab, onTabChange }) {
   const animation = useRef(new Animated.Value(activeTab === 'forYou' ? 0 : 1)).current;
+  const { profile } = useContext(UserContext);
 
-  const profileIcon = userRole === 'student' 
-    ? require('../../assets/std_fcty_homescreen_icons/student_profile.png')
-    : require('../../assets/std_fcty_homescreen_icons/faculty_profile.png');
+  // Dynamic profile icon based on user's actual profile picture
+  const getProfileIcon = () => {
+    // If user has uploaded a profile picture, use it
+    if (profile?.avatar_url) {
+      return { uri: profile.avatar_url };
+    }
+    
+    // Fallback to default role-based icon
+    return userRole === 'student' 
+      ? require('../../assets/std_fcty_homescreen_icons/student_profile.png')
+      : require('../../assets/std_fcty_homescreen_icons/faculty_profile.png');
+  };
 
   const tabWidth = screenWidth / 2;
   const vectorWidth = 80; // Match your vector image width
@@ -51,7 +62,13 @@ export default function HeaderWithTabs({ userRole = 'student', onFilterPress, na
       <View style={styles.topRow}>
         {/* PROFILE ICON WITH NAVIGATION */}
         <TouchableOpacity style={styles.iconButton} onPress={handleProfilePress}>
-          <Image source={profileIcon} style={styles.profileIcon} />
+          <Image 
+            source={getProfileIcon()} 
+            style={[
+              styles.profileIcon,
+              profile?.avatar_url ? styles.dynamicProfileIcon : styles.staticProfileIcon
+            ]} 
+          />
         </TouchableOpacity>
         
         <Image 
@@ -135,6 +152,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   profileIcon: {
+    resizeMode: 'cover',
+  },
+  dynamicProfileIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  staticProfileIcon: {
     width: 28,
     height: 28,
     resizeMode: 'contain',

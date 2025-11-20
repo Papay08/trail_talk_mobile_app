@@ -12,7 +12,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert
+  Alert,
+  Switch
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../styles/colors';
@@ -32,6 +33,7 @@ const CreateCommunityPostScreen = ({ navigation, route }) => {
   const [userInitials, setUserInitials] = useState('USR');
   const [communityData, setCommunityData] = useState(null);
   const { user, loading } = useContext(UserContext);
+  const [isAnonymous, setIsAnonymous] = useState(true);
 
   const textInputRef = useRef(null);
   const scrollViewRef = useRef(null);
@@ -228,22 +230,23 @@ const CreateCommunityPostScreen = ({ navigation, route }) => {
         community_id: communityId
       });
 
-      // Insert into community_posts table
+      // Insert into community_posts table (respecting anonymous toggle)
+      const insertObj = {
+        content: message.trim(),
+        category: selectedCategory,
+        author_id: userData.user.id,
+        community_id: communityId,
+        like_count: 0,
+        comment_count: 0,
+        repost_count: 0,
+        bookmark_count: 0,
+        is_anonymous: !!isAnonymous,
+        ...(isAnonymous ? { anonymous_name: authorInitials } : {})
+      };
+
       const { data, error } = await supabase
         .from('community_posts')
-        .insert([
-          {
-            content: message.trim(),
-            category: selectedCategory,
-            author_id: userData.user.id,
-            anonymous_name: authorInitials,
-            community_id: communityId,
-            like_count: 0,
-            comment_count: 0,
-            repost_count: 0,
-            bookmark_count: 0
-          }
-        ])
+        .insert([insertObj])
         .select();
 
       if (error) {
@@ -265,6 +268,17 @@ const CreateCommunityPostScreen = ({ navigation, route }) => {
               // Clear form and go back to community
               setMessage('');
               setSelectedCategory(null);
+
+              // Notify caller (e.g., CommunityFeedScreen) to refresh immediately
+              try {
+                if (typeof onPostCreated === 'function') {
+                  console.log('🔔 Calling onPostCreated callback');
+                  onPostCreated();
+                }
+              } catch (err) {
+                console.log('Error calling onPostCreated callback:', err);
+              }
+
               navigation.goBack();
             }
           }
@@ -388,11 +402,20 @@ const CreateCommunityPostScreen = ({ navigation, route }) => {
               />
               <View style={styles.userText}>
                 <Text style={styles.userName}>{userDisplayName}</Text>
-                <Text style={styles.userStatus}>Anonymous User • {userInitials}</Text>
+                <Text style={styles.userStatus}>{isAnonymous ? 'Anonymous' : `${userDisplayName}`}</Text>
               </View>
             </View>
-            <View style={styles.verifiedBadge}>
-              <Text style={styles.verifiedText}>✓</Text>
+            <View style={styles.controlsRight}>
+              <View style={styles.verifiedBadge}>
+                <Text style={styles.verifiedText}>✓</Text>
+              </View>
+              <Switch
+                value={isAnonymous}
+                onValueChange={setIsAnonymous}
+                thumbColor={isAnonymous ? '#4ECDC4' : '#f4f3f4'}
+                trackColor={{ false: 'rgba(255,255,255,0.1)', true: 'rgba(78,205,196,0.25)' }}
+                style={styles.anonymousSwitch}
+              />
             </View>
           </View>
 
@@ -534,7 +557,7 @@ const CreateCommunityPostScreen = ({ navigation, route }) => {
             </TouchableOpacity>
             
             <Text style={styles.postDisclaimer}>
-              Your post will be published anonymously as {userDisplayName} in {communityName || 'this community'}
+              {isAnonymous ? `Your post will be published anonymously as ${userInitials} in ${communityName || 'this community'}` : `Your post will be published as ${userDisplayName} in ${communityName || 'this community'}`}
             </Text>
           </View>
 
@@ -699,6 +722,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.white,
     fontFamily: fonts.bold,
+  },
+  controlsRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  anonymousSwitch: {
+    transform: [{ scaleX: 0.85 }, { scaleY: 0.85 }],
+    marginLeft: 8,
   },
   // Section Styles
   section: {

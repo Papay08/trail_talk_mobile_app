@@ -28,6 +28,7 @@ import {
   getCommunityPosts,
   deleteCommunity
 } from '../../lib/supabase';
+import PostCard from '../../components/PostCard';
 import { supabase } from '../../lib/supabase';
 
 export default function CommunityDetailScreen({ navigation, route }) {
@@ -50,6 +51,13 @@ export default function CommunityDetailScreen({ navigation, route }) {
       loadCommunityData();
     }
   }, [communityId, user?.id]);
+
+  // Fetch posts when user switches to posts tab
+  useEffect(() => {
+    if (activeTab === 'posts' && communityId && user?.id) {
+      loadCommunityData();
+    }
+  }, [activeTab, communityId, user?.id]);
 
   // Real-time subscription for community deletion
   useEffect(() => {
@@ -81,6 +89,35 @@ export default function CommunityDetailScreen({ navigation, route }) {
       subscription.unsubscribe();
     };
   }, [communityId, user?.id, navigation]);
+
+  // Real-time subscription for community posts (create/update/delete)
+  useEffect(() => {
+    if (!communityId) return;
+
+    const postsSub = supabase
+      .channel(`community-detail-posts-${communityId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'community_posts',
+          filter: `community_id=eq.${communityId}`
+        },
+        (payload) => {
+          console.log('CommunityDetailScreen real-time post event:', payload.eventType, payload.new?.id || payload.old?.id);
+          // Refresh posts when changes happen
+          if (activeTab === 'posts') {
+            loadCommunityData();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      try { postsSub.unsubscribe(); } catch (e) { console.log('Error unsubscribing postsSub', e); }
+    };
+  }, [communityId, activeTab]);
 
   const loadCommunityData = async () => {
     try {
@@ -261,7 +298,13 @@ export default function CommunityDetailScreen({ navigation, route }) {
   const handleCreatePost = () => {
     navigation.navigate('CreateCommunityPost', { 
       communityId, 
-      communityName: community?.name 
+      communityName: community?.name,
+      onPostCreated: () => {
+        // Immediate refresh when a post is created
+        console.log('CommunityDetailScreen: onPostCreated callback invoked');
+        setTimeout(() => loadCommunityData(), 100);
+        setTimeout(() => loadCommunityData(), 600);
+      }
     });
   };
 
@@ -364,33 +407,13 @@ export default function CommunityDetailScreen({ navigation, route }) {
   };
 
   // Render post item
+  // Render post item using PostCard (UI + interactions)
   const renderPostItem = ({ item }) => (
-    <View style={styles.postItem}>
-      <View style={styles.postHeader}>
-        <View style={styles.postAuthor}>
-          <View style={styles.authorAvatar}>
-            <Ionicons name="person" size={16} color="rgba(255,255,255,0.6)" />
-          </View>
-          <Text style={styles.authorName}>
-            {item.anonymous_name || item.author?.display_name || 'Anonymous'}
-          </Text>
-        </View>
-        <Text style={styles.postTime}>
-          {new Date(item.created_at).toLocaleDateString()}
-        </Text>
-      </View>
-      <Text style={styles.postContent}>{item.content}</Text>
-      <View style={styles.postStats}>
-        <View style={styles.statItem}>
-          <Ionicons name="heart-outline" size={14} color="rgba(255,255,255,0.5)" />
-          <Text style={styles.statText}>{item.like_count}</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Ionicons name="chatbubble-outline" size={14} color="rgba(255,255,255,0.5)" />
-          <Text style={styles.statText}>{item.comment_count}</Text>
-        </View>
-      </View>
-    </View>
+    <PostCard post={item} userRole={community?.userRole || 'student'} onInteraction={(postId, field, newCount) => {
+      console.log('CommunityDetailScreen: post interaction', postId, field, newCount);
+      // Optionally update local posts array for immediate UI
+      setPosts(prev => prev.map(p => p.id === postId ? { ...p, [field]: newCount } : p));
+    }} />
   );
 
   // Delete Confirmation Modal

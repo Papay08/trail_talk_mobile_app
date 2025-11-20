@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../styles/colors';
 import { fonts } from '../styles/fonts';  
 import { supabase } from '../lib/supabase';
@@ -255,8 +256,87 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
     isBookmarked ? '#FFCC00' : 'rgba(255, 255, 255, 0.8)';
 
   // Get the display name - use same logic as PostCard
+  // Use the author's display name and true role when available
+
+  // Fetch author profile (with avatar and nickname) if missing
+  const [authorProfile, setAuthorProfile] = useState(null);
+  const [avatarUrl, setAvatarUrl] = useState(null);
+  useEffect(() => {
+    if (!post.author && post.author_id) {
+      fetchAuthorProfile(post.author_id);
+    }
+  }, [post.author, post.author_id]);
+
+  const fetchAuthorProfile = async (authorId) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('username, display_name, user_type, avatar_url, nickname')
+        .eq('id', authorId)
+        .single();
+      if (!error && data) {
+        setAuthorProfile(data);
+        if (data.avatar_url) {
+          // Get public URL from Supabase storage
+          const { data: publicUrlData } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(data.avatar_url);
+          if (publicUrlData?.publicUrl) {
+            setAvatarUrl(publicUrlData.publicUrl);
+          }
+        } else {
+          setAvatarUrl(null);
+        }
+      }
+    } catch (err) {
+      console.log('Error fetching author profile:', err);
+    }
+  };
+
+  // Show nickname unless anonymous posting is toggled
+  // Display name logic: show nickname unless anonymous posting is toggled
   const getDisplayName = () => {
-    return post.anonymous_username || 'Anonymous';
+    if (post.is_anonymous) {
+      return post.anonymous_username || 'Anonymous';
+    }
+    // Prefer nickname, then display_name, then username
+    return (
+      post.author?.nickname ||
+      authorProfile?.nickname ||
+      post.author?.display_name ||
+      authorProfile?.display_name ||
+      post.author?.username ||
+      authorProfile?.username ||
+      'Anonymous'
+    );
+  };
+
+  // Use true user role from DB
+  // True user role for icon/label
+  const getAuthorRole = () => {
+    return post.author?.user_type || authorProfile?.user_type || post.user_type || userRole;
+  };
+
+  // Ionicons outline for role
+  const getRoleIconName = (role) => {
+    switch((role || '').toLowerCase()) {
+      case 'faculty': return 'school-outline';
+      case 'student': return 'school-outline';
+      case 'admin': return 'shield-checkmark-outline';
+      default: return 'person-outline';
+    }
+  };
+
+  // Ionicons outline for category, matching CreateCommunityPostScreen
+  const getCategoryIconName = (category) => {
+    switch((category || '').toString().toLowerCase()) {
+      case 'discussion': return 'chatbubble-outline';
+      case 'question': return 'help-circle-outline';
+      case 'announcement': return 'megaphone-outline';
+      case 'event': return 'calendar-outline';
+      case 'resource': return 'book-outline';
+      default: return 'document-text-outline';
+    }
   };
 
   return (
@@ -265,11 +345,19 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
       <View style={styles.mainRow}>
         {/* Profile Column */}
         <View style={styles.profileColumn}>
-          <Image 
-            source={require('../../assets/post_card_icons/anon_profile_icon.png')} 
-            style={styles.anonIcon}
-            resizeMode="contain"
-          />
+          {avatarUrl ? (
+            <Image
+              source={{ uri: avatarUrl }}
+              style={styles.anonIcon}
+              resizeMode="cover"
+            />
+          ) : (
+            <Image
+              source={require('../../assets/post_card_icons/anon_profile_icon.png')}
+              style={styles.anonIcon}
+              resizeMode="contain"
+            />
+          )}
         </View>
 
         {/* Content Column */}
@@ -279,24 +367,14 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
             <View style={styles.headerLeft}>
               <View style={styles.usernameRow}>
                 <Text style={styles.username}>{getDisplayName()}</Text>
-                
                 <View style={styles.roleTimeContainer}>
-                  <Image 
-                    source={userRole === 'student' 
-                      ? require('../../assets/post_card_icons/student_icon.png')
-                      : require('../../assets/post_card_icons/faculty_icon.png')
-                    } 
-                    style={styles.roleIcon}
-                    resizeMode="contain"
-                  />
-                  <Text style={styles.roleText}>{userRole === 'student' ? 'Student' : 'Faculty'}</Text>
-                  
+                  <Ionicons name={getRoleIconName(getAuthorRole())} size={14} color="rgba(255,255,255,0.8)" style={{ marginRight: 6 }} />
+                  <Text style={styles.roleText}>{getAuthorRole() ? (getAuthorRole().charAt(0).toUpperCase() + getAuthorRole().slice(1)) : (userRole === 'student' ? 'Student' : 'Faculty')}</Text>
                   <View style={styles.dot} />
                   <Text style={styles.timeText}>{formatTime(post.created_at)}</Text>
                 </View>
               </View>
             </View>
-            
             <TouchableOpacity style={styles.kebabButton}>
               <Text style={styles.kebabIcon}>⋮</Text>
             </TouchableOpacity>
@@ -304,11 +382,7 @@ const CommunityPostCard = ({ post, userRole = 'student', onInteraction }) => {
 
           {/* Category Section */}
           <View style={styles.categorySection}>
-            <Image 
-              source={getCategoryIcon(post.category)} 
-              style={styles.categoryIcon}
-              resizeMode="contain"
-            />
+            <Ionicons name={getCategoryIconName(post.category)} size={16} color="rgba(255,255,255,0.9)" style={styles.categoryIcon} />
             <Text style={styles.categoryText}>{post.category}</Text>
           </View>
 
@@ -543,14 +617,16 @@ const styles = StyleSheet.create({
   },
   footer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'flex-start',
     alignItems: 'center',
+    paddingRight: 12,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    marginRight: 12,
   },
   actionIcon: {
     width: 18,
@@ -560,7 +636,7 @@ const styles = StyleSheet.create({
   actionCount: {
     fontSize: 13,
     fontFamily: fonts.medium,
-    minWidth: 20,
+    minWidth: 16,
     textAlign: 'center',
   },
 });
